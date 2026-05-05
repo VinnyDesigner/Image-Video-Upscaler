@@ -1,0 +1,11 @@
+outputs/
+models/
+gfpgan/weights/
+*.pth
+temp_frames/
+output/
+*.mp4
+*.png
+*.jpg
+__pycache__/
+

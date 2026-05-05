@@ -1,0 +1,13 @@
+torch>=2.0.0
+torchvision
+torchaudio
+opencv-python
+numpy
+Pillow
+realesrgan
+gfpgan
+gradio
+ffmpeg-python
+tqdm
+python-dotenv
+pyyaml
