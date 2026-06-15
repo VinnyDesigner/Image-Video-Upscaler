@@ -6,11 +6,25 @@ from utils import download_model
 from config import MODELS_DIR, DEFAULT_MODEL
 
 class AIUpscaler:
-    def __init__(self, model_name=DEFAULT_MODEL, scale=4, device=None):
+    def __init__(self, model_name=DEFAULT_MODEL, scale=4, device=None, prefer_gpu: bool = True):
+        """Initialize the upscaler.
+
+        Args:
+            model_name (str): Name of the model to download.
+            scale (int): Upscaling factor.
+            device (str|torch.device, optional): Explicit device string; if None, auto‑detect.
+            prefer_gpu (bool): If True, enforce GPU usage and raise an error when CUDA is unavailable.
+        """
         if device is None:
-            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            # Auto‑detect device but respect `prefer_gpu`
+            if prefer_gpu and not torch.cuda.is_available():
+                raise RuntimeError(
+                    "CUDA‑compatible GPU not detected. Install appropriate NVIDIA drivers and a CUDA‑enabled PyTorch build, or set `prefer_gpu=False` to fallback to CPU."
+                )
+            self._device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         else:
-            self.device = torch.device(device)
+            self._device = torch.device(device)
+
             
         self.model_path = download_model(model_name)
         self.scale = scale
@@ -28,9 +42,13 @@ class AIUpscaler:
             tile=TILE_SIZE,
             tile_pad=10,
             pre_pad=0,
-            half=USE_HALF if self.device.type == 'cuda' else False,
-            device=self.device
+            half=USE_HALF if self._device.type == 'cuda' else False,
+            device=self._device
         )
+
+    @property
+    def device(self):
+        return self._device
 
     def upscale(self, img_input):
         if isinstance(img_input, str):

@@ -1,4 +1,5 @@
 import os
+import torch
 import cv2
 from frame_extractor import FrameExtractor
 from upscaler import AIUpscaler
@@ -8,16 +9,26 @@ from utils import get_video_metadata, logger
 from config import TEMP_DIR, OUTPUTS_DIR
 import shutil
 from concurrent.futures import ThreadPoolExecutor
+import time
 
 class UpscalePipeline:
     def __init__(self, video_path, scale=4, face_enhance=True, bitrate="8M", rotation=0):
+        """Initialize the upscaling pipeline.
+
+        Ensures that a CUDA‑compatible GPU is available; otherwise raises an error.
+        """
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA‑compatible GPU not detected. Please ensure GPU drivers and a CUDA‑enabled PyTorch are installed.")
         self.video_path = video_path
         self.scale = scale
         self.face_enhance = face_enhance
         self.bitrate = bitrate
         self.rotation = rotation
-        self.metadata = get_video_metadata(video_path)
         
+        self.metadata = get_video_metadata(video_path)
+        if self.metadata is None:
+            raise ValueError("Failed to read video metadata. The file may be corrupt or not a valid video format.")
+            
         self.extractor = FrameExtractor(video_path, manual_rotation=rotation)
         self.writer = VideoWriter(video_path)
         
@@ -41,6 +52,10 @@ class UpscalePipeline:
         count = 0
         with ThreadPoolExecutor(max_workers=4) as executor:
             for i, frame_path in self.extractor.extract_frames():
+                import gc
+                gc.collect()
+                torch.cuda.empty_cache()
+                
                 # Read frame once
                 img = cv2.imread(frame_path, cv2.IMREAD_UNCHANGED)
                 
@@ -61,6 +76,6 @@ class UpscalePipeline:
         output_path = self.writer.assemble_video(pattern, self.metadata['fps'], bitrate=self.bitrate)
         
         # 4. Cleanup
-        # self.extractor.cleanup()
+        self.extractor.cleanup()
         
         return output_path

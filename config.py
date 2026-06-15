@@ -19,7 +19,7 @@ FACE_ENHANCE_MODEL = "GFPGANv1.4"
 # Processing Settings
 BATCH_SIZE = 4  # Frames per batch for GPU (not currently used by libraries)
 THREADS = 4     # For CPU fallback and disk I/O
-TILE_SIZE = 800 # Higher = faster but more VRAM usage (default 400-800)
+TILE_SIZE = 400 # Higher = faster but more VRAM usage (default 400-800)
 USE_HALF = True # Use FP16 for speed (CUDA only)
 
 # UI Configuration

@@ -44,6 +44,8 @@ def get_info(video_file):
     if video_file is None:
         return "No video uploaded."
     meta = get_video_metadata(video_file)
+    if meta is None:
+        return "⚠️ Error reading video. Please ensure the file is a valid video format."
     return f"""
     ### Video Metadata
     - **Resolution:** {meta['width']}x{meta['height']}
@@ -119,7 +121,7 @@ with gr.Blocks(theme=gr.themes.Soft(primary_hue="blue", secondary_hue="slate"), 
         with gr.Tab("🖼️ Image Upscaler"):
             with gr.Row():
                 with gr.Column(scale=1):
-                    image_input = gr.Image(label="Upload Image", type="numpy")
+                    image_input = gr.Image(label="Upload Image", type="numpy", format="png")
                     
                     with gr.Accordion("Image Settings", open=True):
                         i_scale_opt = gr.Radio(["x2", "x4"], label="Upscale Factor", value="x4")
@@ -144,7 +146,7 @@ with gr.Blocks(theme=gr.themes.Soft(primary_hue="blue", secondary_hue="slate"), 
                     i_run_btn = gr.Button("✨ Start Image Enhancement", variant="primary")
                     
                 with gr.Column(scale=1):
-                    image_output = gr.Image(label="Enhanced Image")
+                    image_output = gr.Image(label="Enhanced Image", format="png")
                     i_status_output = gr.Textbox(label="Status")
             
     video_input.change(get_info, inputs=video_input, outputs=info_display)
