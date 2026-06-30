@@ -91,6 +91,25 @@ def process_image(image, scale, face_enhance, enable_color, color_mode, enable_o
     
     return cv2.cvtColor(enhanced, cv2.COLOR_BGR2RGB), f"Enhanced in {duration:.2f} seconds."
 
+def process_ocr(image, engine, recovery_opts, strength, output_mode, ai_reconstruct):
+    if image is None:
+        return None, "Please upload an image.", None
+    
+    # Convert RGB to BGR for opencv processing
+    img_bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    
+    from ocr_pipeline import OCRPipeline
+    pipeline = OCRPipeline()
+    enhanced_bgr, status, exported_files = pipeline.process(
+        img_bgr, engine=engine, recovery_opts=recovery_opts, 
+        strength=strength, output_mode=output_mode, ai_reconstruct=ai_reconstruct
+    )
+    
+    # Convert BGR back to RGB for Gradio
+    enhanced_rgb = cv2.cvtColor(enhanced_bgr, cv2.COLOR_BGR2RGB)
+    
+    return enhanced_rgb, status, exported_files
+
 with gr.Blocks(theme=gr.themes.Soft(primary_hue="blue", secondary_hue="slate"), title="AI Video Upscaler Pro") as demo:
     gr.Markdown("""
     # ✨ AI Media Upscaler Pro
@@ -124,7 +143,7 @@ with gr.Blocks(theme=gr.themes.Soft(primary_hue="blue", secondary_hue="slate"), 
                     image_input = gr.Image(label="Upload Image", type="numpy", format="png")
                     
                     with gr.Accordion("Image Settings", open=True):
-                        i_scale_opt = gr.Radio(["x2", "x4"], label="Upscale Factor", value="x4")
+                        i_scale_opt = gr.Radio(["x2", "x4", "x8"], label="Upscale Factor", value="x4")
                         i_face_opt = gr.Checkbox(label="Face Enhancement (GFPGAN)", value=True)
                         
                         with gr.Group():
@@ -148,6 +167,33 @@ with gr.Blocks(theme=gr.themes.Soft(primary_hue="blue", secondary_hue="slate"), 
                 with gr.Column(scale=1):
                     image_output = gr.Image(label="Enhanced Image", format="png")
                     i_status_output = gr.Textbox(label="Status")
+
+        # --- OCR Tab ---
+        with gr.Tab("📑 OCR"):
+            with gr.Row():
+                with gr.Column(scale=1):
+                    ocr_input = gr.Image(label="Upload Screenshot or Document", type="numpy")
+                    
+                    with gr.Accordion("OCR Settings", open=True):
+                        ocr_engine = gr.Dropdown(["Auto", "PaddleOCR", "EasyOCR"], label="OCR Engine", value="Auto")
+                        
+                        ocr_recovery_opts = gr.CheckboxGroup(
+                            choices=["Text Detection", "Text Restoration", "Layout Preservation", "Table Enhancement", "Dashboard Optimization", "Screenshot Mode"],
+                            value=["Text Detection", "Text Restoration", "Layout Preservation", "Table Enhancement", "Dashboard Optimization"],
+                            label="Recovery Options"
+                        )
+                        
+                        ocr_output_mode = gr.Dropdown(["Visual Enhancement Only", "OCR Overlay", "Clean Reconstructed Screenshot", "Confidence Heatmap"], label="Output Mode", value="Visual Enhancement Only")
+                        ocr_ai_reconstruct = gr.Checkbox(label="AI Reconstruction Mode (System Fonts)", value=False)
+                        
+                        ocr_strength = gr.Radio(["Low", "Medium", "High"], label="Enhancement Strength", value="Medium")
+                    
+                    ocr_run_btn = gr.Button("🔍 Run OCR & Recover", variant="primary")
+                    
+                with gr.Column(scale=1):
+                    ocr_output = gr.Image(label="Recovered Image")
+                    ocr_status_output = gr.Textbox(label="Status")
+                    ocr_files_output = gr.File(label="Download Files")
             
     video_input.change(get_info, inputs=video_input, outputs=info_display)
     v_run_btn.click(process_video, 
@@ -159,6 +205,10 @@ with gr.Blocks(theme=gr.themes.Soft(primary_hue="blue", secondary_hue="slate"), 
                            i_color_toggle, i_color_mode, 
                            i_out_toggle, i_out_w, i_out_h, i_out_pad, i_out_mode],
                    outputs=[image_output, i_status_output])
+                   
+    ocr_run_btn.click(process_ocr,
+                      inputs=[ocr_input, ocr_engine, ocr_recovery_opts, ocr_strength, ocr_output_mode, ocr_ai_reconstruct],
+                      outputs=[ocr_output, ocr_status_output, ocr_files_output])
 
 if __name__ == "__main__":
     demo.launch(share=False)
